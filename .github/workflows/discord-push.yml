@@ -18,19 +18,34 @@ jobs:
           COMMIT_MSG: ${{ github.event.head_commit.message }}
           COMMIT_URL: ${{ github.event.head_commit.url }}
         run: |
-          curl -sS -H "Content-Type: application/json" \
-          -d "{
-            \"username\": \"Honeypot CI\",
-            \"avatar_url\": \"https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png\",
-            \"embeds\": [{
-              \"title\": \"Push détecté\",
-              \"description\": \"**${ACTOR}** a push sur **${REPO}**\",
-              \"color\": 3447003,
-              \"fields\": [
-                {\"name\": \"Branche\", \"value\": \"\`${BRANCH}\`\", \"inline\": true},
-                {\"name\": \"Commit\", \"value\": \"[Voir le commit](${COMMIT_URL})\", \"inline\": true},
-                {\"name\": \"Message\", \"value\": \"\`${COMMIT_MSG}\`\", \"inline\": false}
-              ]
-            }]
-          }" \
-          "$WEBHOOK"
+          if [ -z "$WEBHOOK" ]; then
+            echo "DISCORD_WEBHOOK_URL secret is missing/empty"
+            exit 1
+          fi
+
+          WEBHOOK="$(printf %s "$WEBHOOK" | tr -d '\r\n')"
+
+          payload="$(jq -n \
+            --arg actor "$ACTOR" \
+            --arg repo "$REPO" \
+            --arg branch "$BRANCH" \
+            --arg msg "$COMMIT_MSG" \
+            --arg url "$COMMIT_URL" \
+            '{
+              username: "Honeypot CI",
+              embeds: [{
+                title: "Push détecté",
+                description: ("**" + $actor + "** a push sur **" + $repo + "**"),
+                color: 3447003,
+                fields: [
+                  {name:"Branche", value: ("`" + $branch + "`"), inline:true},
+                  {name:"Commit", value: ("[Voir le commit](" + $url + ")"), inline:true},
+                  {name:"Message", value: $msg, inline:false}
+                ]
+              }]
+            }'
+          )"
+
+          curl -sS -f -H "Content-Type: application/json" \
+            --data "$payload" \
+            "$WEBHOOK"
