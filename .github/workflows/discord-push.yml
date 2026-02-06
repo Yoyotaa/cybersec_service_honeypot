@@ -31,6 +31,7 @@ jobs:
             --arg branch "$BRANCH" \
             --arg msg "$COMMIT_MSG" \
             --arg url "$COMMIT_URL" \
+            --arg repo_url "https://github.com/$REPO" \
             '{
               username: "Honeypot CI",
               embeds: [{
@@ -38,6 +39,7 @@ jobs:
                 description: ("**" + $actor + "** a push sur **" + $repo + "**"),
                 color: 3447003,
                 fields: [
+                  {name:"Repo", value: ("[Ouvrir le repo](" + $repo_url + ")"), inline:true},
                   {name:"Branche", value: ("`" + $branch + "`"), inline:true},
                   {name:"Commit", value: ("[Voir le commit](" + $url + ")"), inline:true},
                   {name:"Message", value: $msg, inline:false}
@@ -45,7 +47,6 @@ jobs:
               }]
             }'
           )"
-
           curl -sS -f -H "Content-Type: application/json" \
             --data "$payload" \
             "$WEBHOOK"
